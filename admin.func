@@ -1,0 +1,103 @@
+function calculateAndSaveTeacherSalary($conn, $teacher_id, $class_id, $month)
+{
+
+    // $class_revenue = null;
+    // $total_sessions = null;
+    // $sessions_taught = null;
+
+
+    $year = date('Y', strtotime($month));
+    $month_num = date('m', strtotime($month));
+
+    // 1. Lấy phương pháp + giá trị lương hiện thời
+    $sql = "
+      SELECT sth.salary_type_id, sth.salary_value, st.salary_method
+      FROM salary_type_history sth
+      JOIN salary_type st ON sth.salary_type_id = st.salary_type_id
+      WHERE sth.teacher_id = ? AND sth.effective_from <= ?
+      ORDER BY sth.effective_from DESC
+      LIMIT 1
+    ";
+    $stmt = $conn->prepare($sql);
+    $month_end = date('Y-m-t', strtotime($month));
+    $stmt->bind_param("is", $teacher_id, $month_end);
+    $stmt->execute();
+    $stmt->bind_result($salary_type_id, $salary_value, $salary_method);
+    if (!$stmt->fetch()) {
+        // Nếu không có lịch sử nào → không tính
+        $salary_type_id = null;
+        $salary_value = 0;
+        $salary_method = null;
+    }
+    $stmt->close();
+
+    $stmt_rev = $conn->prepare("SELECT SUM(amount_paid) FROM monthly_invoices mi JOIN class_student_member csm ON mi.student_id = csm.student_id WHERE csm.class_id = ? AND mi.month = ?");
+    $stmt_rev->bind_param("is", $class_id, $month);
+    $stmt_rev->execute();
+    $stmt_rev->bind_result($class_revenue);
+    $stmt_rev->fetch();
+    $stmt_rev->close();
+    $class_revenue = $class_revenue ?? 0;
+
+    $stmt_total = $conn->prepare("SELECT COUNT(*) FROM attendance WHERE class_id = ? AND YEAR(date) = ? AND MONTH(date) = ?");
+    $stmt_total->bind_param("iii", $class_id, $year, $month_num);
+    $stmt_total->execute();
+    $stmt_total->bind_result($total_sessions);
+    $stmt_total->fetch();
+    $stmt_total->close();
+    $total_sessions = $total_sessions ?? 0;
+
+    $stmt_taught = $conn->prepare("SELECT COUNT(*) FROM attendance WHERE class_id = ? AND teacher_id = ? AND YEAR(date) = ? AND MONTH(date) = ?");
+    $stmt_taught->bind_param("iiii", $class_id, $teacher_id, $year, $month_num);
+    $stmt_taught->execute();
+    $stmt_taught->bind_result($sessions_taught);
+    $stmt_taught->fetch();
+    $stmt_taught->close();
+    $sessions_taught = $sessions_taught ?? 0;
+
+    // 5. Tính lương theo phương pháp
+    $calculated_salary = 0;
+    switch ($salary_method) {
+        case 'percentage':
+            $calculated_salary = ($class_revenue * $salary_value) / 100;
+            break;
+
+        case 'fixed_session':
+            $calculated_salary = $salary_value * $sessions_taught;
+            break;
+
+        case 'monthly':
+            $calculated_salary = $salary_value;
+            break;
+
+        default:
+            // fallback nếu chưa xác định
+            if ($total_sessions > 0) {
+                $calculated_salary = ($class_revenue * $sessions_taught) / $total_sessions;
+            }
+            break;
+    }
+
+    $salary_type_id = $salary_type_id ?? 1; // Sử dụng giá trị mặc định nếu không có
+    $sql_save = "INSERT INTO teacher_salaries (teacher_id, class_id, month, class_revenue, total_sessions, sessions_taught, calculated_salary,salary_type_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?,?)
+                 ON DUPLICATE KEY UPDATE 
+                    class_revenue = VALUES(class_revenue),
+                    total_sessions = VALUES(total_sessions),
+                    sessions_taught = VALUES(sessions_taught),
+                    calculated_salary = VALUES(calculated_salary),
+                    salary_type_id = VALUES(salary_type_id)";
+    $stmt_save = $conn->prepare($sql_save);
+    $stmt_save->bind_param("iisdiidi", $teacher_id, $class_id, $month, $class_revenue, $total_sessions, $sessions_taught, $calculated_salary, $salary_type_id);
+    $stmt_save->execute();
+    $stmt_save->close();
+
+    return [
+        'class_revenue' => $class_revenue,
+        'total_sessions' => $total_sessions,
+        'sessions_taught' => $sessions_taught,
+        'calculated_salary' => $calculated_salary,
+        'salary_method' => $salary_method,
+        'salary_value' => $salary_value
+    ];
+}
