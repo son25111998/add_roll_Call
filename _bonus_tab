@@ -1,0 +1,203 @@
+<div class="container mt-4">
+    <h1 class="text-center mb-4">Quản Lý Thưởng Giáo Viên</h1>
+    <!-- <?php
+            var_dump($all_teachers)
+            ?> -->
+    <!-- Form Thêm/Sửa Thưởng -->
+    <button id="toggle-form-btn" class="btn btn-success mb-3">Thêm thưởng mới</button>
+    <div id="bonus-form-wrapper" class="mb-3" style="display: none;">
+        <form action="../includes/admin_action.inc.php" method="POST" class="d-inline">
+            <input type="hidden" name="action" value="insert_teacher_bonus">
+            <div class="mb-3">
+                <label for="teacher_id" class=" form-label">Giáo viên</label>
+                <select class="form-select" id="user_id" name="user_id" required>
+                    <option value="">Chọn giáo viên</option>
+                    <?php foreach ($all_teachers as $teacher): ?>
+                        <option name="user_id" value="<?= $teacher['teacher_id'] ?>"><?= htmlspecialchars($teacher['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="bonus_amount" class="form-label">Số tiền thưởng (VNĐ)</label>
+                <input type="number" class="form-control" id="bonus_amount" name=" bonus_amount" required>
+            </div>
+            <div class="mb-3">
+                <label for="bonus_reason" class="form-label">Lý do thưởng</label>
+                <textarea class="form-control" id="bonus_reason" name="bonus_reason" rows="3" required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="effective_from" class="form-label">Ngày hiệu lực</label>
+                <input type="date" class="form-control" id="effective_from" name="effective_from" required>
+            </div>
+            <div class="mb-3">
+                <label for="effective_to" class="form-label">Ngày hết hiệu lực</label>
+                <input type="date" class="form-control" id="effective_to>" name="effective_to">
+            </div>
+            <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary">Lưu</button>
+                <button type="reset" class="btn btn-secondary">Hủy</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bộ Lọc Theo Tháng -->
+    <div class="mt-4">
+        <form id="filterForm">
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="filter_month">Lọc theo tháng</label>
+                    <!-- <select class="form-select" id="filter_month" name="filter_month" onchange="onFilterMonthChange(this)"> -->
+                    <select class="form-select" id="filter_month" name="filter_month">
+                        <option value="">Tất cả tháng</option>
+                        <option value=" 1" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '1') ? 'selected' : '' ?>>Tháng 1</option>
+                        <option value="2" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '2') ? 'selected' : '' ?>>Tháng 2</option>
+                        <option value="3" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '3') ? 'selected' : '' ?>>Tháng 3</option>
+                        <option value="4" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '4') ? 'selected' : '' ?>>Tháng 4</option>
+                        <option value="5" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '5') ? 'selected' : '' ?>>Tháng 5</option>
+                        <option value="6" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '6') ? 'selected' : '' ?>>Tháng 6</option>
+                        <option value="7" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '7') ? 'selected' : '' ?>>Tháng 7</option>
+                        <option value="8" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '8') ? 'selected' : '' ?>>Tháng 8</option>
+                        <option value="9" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '9') ? 'selected' : '' ?>>Tháng 9</option>
+                        <option value="10" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '10') ? 'selected' : '' ?>>Tháng 10</option>
+                        <option value="11" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '11') ? 'selected' : '' ?>>Tháng 11</option>
+                        <option value="12" <?= (isset($_GET['filter_month']) && $_GET['filter_month'] == '12') ? 'selected' : '' ?>>Tháng 12</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="filter_teacher">Giáo viên</label>
+                    <!-- <select class="form-select" id="teacher_id" name="teacher_id" required onchange="onTeacherChange(this)"> -->
+                    <select class="form-select" id="teacher_id" name="teacher_id">
+                        <option value="">Chọn giáo viên</option>
+                        <?php foreach ($all_teachers as $teacher): ?>
+                            <option name="teacher_id" value="<?= $teacher['teacher_id'] ?>"><?= htmlspecialchars($teacher['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary">Lọc</button>
+                    <a href="" class="btn btn-secondary ms-2">Xóa lọc</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Danh Sách Thưởng -->
+    <table class="table table-striped mt-4" id="teacher_bonus_table">
+        <thead>
+            <tr>
+                <th>Giáo viên</th>
+                <th>Số tiền thưởng</th>
+                <th>Lý do thưởng</th>
+                <th>Ngày hiệu lực</th>
+                <th>Ngày hết hiệu lực</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dữ liệu thưởng sẽ được nạp từ cơ sở dữ liệu -->
+            <!-- <?php
+                    var_dump($all_teachers_bonus)
+                    ?> -->
+            <?php foreach ($all_teachers_bonus as $teacher_bonus): ?>
+                <tr>
+                    <td><?= htmlspecialchars($teacher_bonus['name']) ?></td>
+                    <td><?= number_format($teacher_bonus['bonus_amount']) ?></td>
+                    <td><?= htmlspecialchars($teacher_bonus['bonus_reason'], ENT_QUOTES, 'UTF-8') ?></td>
+                    <td><?= htmlspecialchars($teacher_bonus['effective_from']) ?></td>
+                    <td><?= htmlspecialchars($teacher_bonus['effective_to']) ?></td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-warning edit-teacher-bonus-btn" data-teacher-id="<?= $teacher_bonus['id'] ?>"><i class="fas fa-pen"></i></button>
+                        <form action="../includes/admin_action.inc.php" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa thưởng của giáo viên này?');" class="d-inline">
+                            <input type="hidden" name="action" value="delete_teacher_bonus">
+                            <input type="hidden" name="user_type" value="teacher">
+                            <input type="hidden" name="teacher_bonus_id" value="<?= $teacher_bonus['id'] ?>">
+                            <!-- <?php
+                                    echo $teacher_bonus['id']
+                                    ?> -->
+                            <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#filterForm').on('change', 'select', async function() {
+            try {
+                const teacherID = $('#teacher_id').val();
+                const filerMonth = $('#filter_month').val();
+                const response = await fetch(`<?= BASE_URL ?>includes/ajax_get_teacher_bonus.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: JSON.stringify({
+                        teacher_id: teacherID,
+                        filter_month: filerMonth,
+                    }),
+                });
+
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (error) {
+                    console.error('Lỗi phân tích JSON:', error);
+                    console.error('Nội dung phản hồi:', text);
+                    return; // dừng nếu JSON không hợp lệ
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const contentType = response.headers.get('Content-Type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Phản hồi không phải là JSON');
+                }
+
+                const tbody = $('#teacher_bonus_table tbody');
+                tbody.empty();
+
+                data.forEach(function(item) {
+                    const row = $('<tr>');
+                    row.append('<td>' + item.name + '</td>');
+                    row.append('<td>' + item.bonus_amount + '</td>');
+                    row.append('<td>' + item.bonus_reason + '</td>');
+                    row.append('<td>' + item.effective_from + '</td>');
+                    row.append('<td>' + item.effective_to + '</td>');
+                    row.append('<td class="text-center">' +
+                        '<button class="btn btn-sm btn-warning edit-teacher-bonus-btn" data-teacher-id="' + item.id + '"><i class="fas fa-pen"></i></button> ' +
+                        '<form action="../includes/admin_action.inc.php" method="POST" onsubmit="return confirm(\'Bạn có chắc chắn muốn xóa thưởng của giáo viên này?\');" class="d-inline">' +
+                        '<input type="hidden" name="action" value="delete_teacher_bonus">' +
+                        '<input type="hidden" name="user_type" value="teacher">' +
+                        '<input type="hidden" name="teacher_bonus_id" value="' + item.id + '">' +
+                        '<button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>' +
+                        '</form>' +
+                        '</td>');
+                    tbody.append(row);
+                });
+            } catch (error) {
+                console.error('Lỗi:', error);
+            }
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('toggle-form-btn');
+        const wrapper = document.getElementById('bonus-form-wrapper');
+
+        btn.addEventListener('click', () => {
+            if (wrapper.style.display === 'none' || wrapper.style.display === '') {
+                wrapper.style.display = 'block';
+                btn.textContent = 'Ẩn form';
+            } else {
+                wrapper.style.display = 'none';
+                btn.textContent = 'Thêm thưởng mới';
+            }
+        });
+    });
+</script>
