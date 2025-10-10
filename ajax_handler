@@ -1,0 +1,209 @@
+<?php
+// File: public_html/admin/ajax_handler.php
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+header('Content-Type: application/json, charset=utf-8');
+
+// Bật hiển thị lỗi để gỡ lỗi AJAX (có thể tắt đi khi hệ thống đã ổn định)
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../../config/dbh.inc.php';
+require_once __DIR__ . '/../includes/admin.function.inc.php';
+
+if (!isset($_SESSION['admin_id'])) {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
+    exit();
+}
+
+$action = $_REQUEST['action'] ?? '';
+
+switch ($action) {
+    // --- ACTIONS FOR PACKAGES ---
+    case 'get_student_enrollments':
+        $student_id = $_GET['student_id'] ?? 0;
+        if (!$student_id) exit(json_encode(['success' => false, 'message' => 'Thiếu ID học sinh.']));
+        $enrollments = getStudentEnrollmentsWithInstallments($conn, $student_id);
+        echo json_encode(['success' => true, 'enrollments' => $enrollments]);
+        break;
+
+    case 'create_enrollment':
+        $student_id = $_POST['student_id'] ?? 0;
+        $course_name = $_POST['course_name'] ?? 'Khóa học';
+        $total_fee = $_POST['total_fee'] ?? 0;
+        $total_sessions = $_POST['total_sessions'] ?? 0;
+        $notes = $_POST['notes'] ?? '';
+        $result = adminCreateCourseEnrollment($conn, $student_id, $course_name, $total_fee, $total_sessions, $notes);
+        echo json_encode($result);
+        break;
+
+    case 'add_installment':
+        $enrollment_id = $_POST['enrollment_id'] ?? 0;
+        $amount_due = $_POST['amount_due'] ?? 0;
+        $due_date = $_POST['due_date'] ?? '';
+        $result = adminAddPaymentInstallment($conn, $enrollment_id, $amount_due, $due_date);
+        echo json_encode($result);
+        break;
+
+    case 'record_payment':
+        $installment_id = $_POST['installment_id'] ?? 0;
+        $result = adminRecordInstallmentPayment($conn, $installment_id);
+        echo json_encode($result);
+        break;
+
+    case 'get_package_history':
+        $student_id = $_GET['student_id'] ?? 0;
+        if (empty($student_id)) {
+            echo json_encode(['success' => false, 'message' => 'Thiếu ID học sinh.']);
+            exit();
+        }
+        $history = getStudentPackageHistory($conn, $student_id);
+        echo json_encode(['success' => true, 'history' => $history]);
+        break;
+
+    case 'add_package':
+        $student_id = $_POST['student_id'] ?? 0;
+        $total_sessions = $_POST['total_sessions'] ?? 0;
+        $payment_amount = $_POST['payment_amount'] ?? 0;
+        $notes = $_POST['notes'] ?? '';
+
+        if (empty($student_id) || empty($total_sessions) || !isset($_POST['payment_amount'])) {
+            echo json_encode(['success' => false, 'message' => 'Vui lòng điền đầy đủ thông tin bắt buộc.']);
+            exit();
+        }
+        $result = adminAddStudentPackage($conn, $student_id, $total_sessions, $payment_amount, $notes);
+        echo json_encode($result);
+        break;
+
+    // --- ACTIONS FROM DASHBOARD ---
+    case 'add_other_fee':
+        $fee_name = $_POST['fee_name'] ?? '';
+        $fee_value = $_POST['fee_value'] ?? 0;
+        if (addOtherFee($conn, $fee_name, $fee_value)) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Lỗi khi thêm phí.']);
+        }
+        break;
+
+    case 'delete_other_fee':
+        $fee_id = $_POST['fee_id'] ?? 0;
+        if (deleteOtherFee($conn, $fee_id)) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Lỗi khi xóa phí.']);
+        }
+        break;
+
+    case 'get_teacher_details':
+        $teacher_id = $_GET['teacher_id'] ?? 0;
+        $details = getTeacherDetails($conn, $teacher_id);
+        if ($details) {
+            echo json_encode(['success' => true, 'data' => $details]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Không tìm thấy giáo viên.']);
+        }
+        break;
+
+    case 'get_teacher_bonus_details':
+        $teacher_bonus_id = $_GET['teacher_id'] ?? 0;
+        $details = getTeacherBonusDetails($conn, $teacher_bonus_id);
+        if (!empty($details)) {
+            echo json_encode(['success' => true, 'data' => $details]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Không tìm thấy thưởng giáo viên.']);
+        }
+        break;
+
+    case 'add_teacher':
+        $name = $_POST['name'] ?? '';
+        $email = $_POST['email'] ?? '';
+        $password = $_POST['password'] ?? '';
+        if (adminAddTeacher($conn, $name, $email, $password)) {
+            echo json_encode(['success' => true, 'message' => 'Thêm giáo viên thành công.']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Email đã tồn tại.']);
+        }
+        break;
+
+    case 'get_other_fees':
+        $fees = getOtherFees($conn);
+        $response = ['success' => true, 'fees' => $fees];
+        break;
+
+    case 'update_teacher':
+        $teacher_id = $_POST['teacher_id'] ?? 0;
+        $name = $_POST['name'] ?? '';
+        $email = $_POST['email'] ?? '';
+        $password = $_POST['password'] ?? '';
+        if (adminUpdateTeacher($conn, $teacher_id, $name, $email, $password)) {
+            echo json_encode(['success' => true, 'message' => 'Cập nhật thành công.']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Email đã tồn tại ở tài khoản khác.']);
+        }
+        break;
+
+    case 'update_teacher_bonus':
+        $id =  (int) ($_POST['teacher_bonus_id'] ?? 0);
+        $teacher_id =  (int) ($_POST['bonus_teacher_id'] ?? 0);
+        $bonus_amount = (float)($_POST['bonus_amount'] ?? 0);
+        $bonus_reason = $_POST['bonus_reason'] ?? '';
+        $effective_from = $_POST['effective_from'] ?? '';
+        $effective_to = $_POST['effective_to'] ?? '';
+
+        // var_dump($id);
+        // var_dump($teacher_id);
+        // var_dump($bonus_amount);
+        // var_dump($bonus_reason);
+        // var_dump($effective_from);
+        // var_dump($effective_to);
+        // exit();
+        if (adminUpdateTeacherBonus($conn, $id, $teacher_id, $bonus_amount, $bonus_reason, $effective_from,  $effective_to)) {
+            echo json_encode(['success' => true, 'message' => 'Cập nhật thành công.']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Cập nhật không thành công.']);
+        }
+        break;
+
+    // *** THÊM MỚI: Action để xác nhận thanh toán ***
+    case 'confirm_payment':
+        $payment_id = $_POST['payment_id'] ?? 0;
+        if (!$payment_id) {
+            echo json_encode(['success' => false, 'message' => 'Thiếu ID thanh toán.']);
+            exit();
+        }
+        $result = adminConfirmPayment($conn, $payment_id);
+        echo json_encode($result);
+        break;
+
+    case 'add_new_family':
+        $parent_data = [
+            'name' => $_POST['parent_name'] ?? '',
+            'phone' => $_POST['parent_phone'] ?? '',
+            'discount_type' => 'none', // Mặc định
+            'discount_value' => 0,
+            'tuition_model' => 'monthly' // Mặc định
+        ];
+        $students_data = [];
+        if (isset($_POST['students'])) {
+            for ($i = 0; $i < count($_POST['students']['name']); $i++) {
+                $students_data[] = [
+                    'name' => $_POST['students']['name'][$i],
+                    'email' => $_POST['students']['email'][$i],
+                    'password' => $_POST['students']['password'][$i],
+                    'school' => $_POST['students']['school'][$i],
+                    'class' => $_POST['students']['class'][$i]
+                ];
+            }
+        }
+        $result = adminAddNewFamily($conn, $parent_data, $students_data);
+        echo json_encode($result);
+        break;
+
+    default:
+        echo json_encode(['success' => false, 'message' => 'Hành động không hợp lệ.']);
+        break;
+}
