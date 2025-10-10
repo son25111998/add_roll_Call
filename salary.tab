@@ -29,7 +29,11 @@ $salary_report = getSalaryReportForMonth($conn, $salary_month);
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-salary-<?= $teacher_id ?>">
                                     <div class="d-flex justify-content-between w-100 pe-3">
                                         <strong><?= htmlspecialchars($data['teacher_name']) ?></strong>
-                                        <strong class="text-danger">Tổng lương: <?= number_format($data['total_salary']) ?> VNĐ</strong>
+                                        <?php
+                                        $total_bonus = isset($data['classes'][0]['total_bonus']) && is_numeric($data['classes'][0]['total_bonus']) ? $data['classes'][0]['total_bonus'] : 0;
+                                        $total_salary = $data['total_salary'] + $total_bonus;
+                                        ?>
+                                        <strong class="text-danger">Tổng lương: <?= number_format($total_salary) ?> VNĐ</strong>
                                     </div>
                                 </button>
                             </h2>
@@ -50,7 +54,11 @@ $salary_report = getSalaryReportForMonth($conn, $salary_month);
                                         <tbody>
                                             <!-- <?php
                                                     var_dump($data['classes']);
-                                                    ?> -->
+                                                    ?>
+                                            <?php
+                                            echo "================================================================================";
+                                            var_dump($record['segments']);
+                                            ?> -->
                                             <?php foreach ($data['classes'] as $record): ?>
                                                 <tr>
                                                     <td><?= htmlspecialchars($record['class_name']) ?></td>
@@ -62,6 +70,11 @@ $salary_report = getSalaryReportForMonth($conn, $salary_month);
                                                     <td><?= number_format($record['calculated_salary']) ?></td>
                                                 </tr>
                                             <?php endforeach; ?>
+                                            <!-- Dòng hiển thị tổng thưởng riêng -->
+                                            <tr class="table-info">
+                                                <td colspan="6" class="text-end"><strong>Tổng thưởng:</strong></td>
+                                                <td><strong><?= number_format($data['classes'][0]['total_bonus']) ?></strong></td>
+                                            </tr>
                                         </tbody>
                                     </table>
                                 </div>
