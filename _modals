@@ -1,0 +1,281 @@
+<!-- File: admin/tabs/_modals.php -->
+
+<!-- MODAL THÊM GIÁO VIÊN -->
+<div class="modal fade" id="addTeacherModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm Giáo viên mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="add-teacher-form">
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="add_teacher">
+                    <div class="mb-3">
+                        <label class="form-label">Họ và tên</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mật khẩu</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <div id="add-teacher-alert" class="alert d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Thêm mới</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SỬA GIÁO VIÊN -->
+<div class="modal fade" id="editTeacherModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chỉnh sửa thông tin Giáo viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="edit-teacher-form">
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="update_teacher">
+                    <input type="hidden" name="teacher_id" id="edit_teacher_id">
+                    <div class="mb-3">
+                        <label class="form-label">Họ và tên</label>
+                        <input type="text" class="form-control" name="name" id="edit_teacher_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" id="edit_teacher_email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mật khẩu mới (để trống nếu không đổi)</label>
+                        <input type="password" class="form-control" name="password">
+                    </div>
+                    <div id="edit-teacher-alert" class="alert d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SỬA thưởng GIÁO VIÊN -->
+<div class="modal fade" id="editTeacherBonusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chỉnh sửa thưởng của Giáo viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="edit-teacher-bonus-form">
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="update_teacher_bonus">
+                    <input type="hidden" name="teacher_bonus_id" id="edit_teacher_bonus_id">
+                    <input type="hidden" name="bonus_teacher_id" id="bonus_teacher_id">
+                    <div class="mb-3">
+                        <label for="bonus_amount" class="form-label">Số tiền thưởng (VNĐ)</label>
+                        <input type="number" class="form-control" id="edit_bonus_amount" name="bonus_amount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bonus_reason" class="form-label">Lý do thưởng</label>
+                        <textarea class="form-control" id="edit_bonus_reason" name="bonus_reason" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="effective_from" class="form-label">Ngày hiệu lực</label>
+                        <input type="date" class="form-control" id="edit_effective_from" name="effective_from" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="effective_to" class="form-label">Ngày hết hiệu lực</label>
+                        <input type="date" class="form-control" id="edit_effective_to" name="effective_to">
+                    </div>
+                    <div id="edit-teacher-bonus-alert" class="alert d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SỬA ƯU ĐÃI -->
+<div class="modal fade" id="editDiscountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sửa ưu đãi cho Phụ huynh: <span id="parent-phone-display"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="../includes/admin_action.inc.php" method="POST">
+                <input type="hidden" name="action" value="update_discount">
+                <input type="hidden" name="parent_id" id="edit-parent-id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="discount-type" class="form-label">Loại ưu đãi</label>
+                        <select class="form-select" id="discount-type" name="discount_type">
+                            <option value="none">Không có</option>
+                            <option value="percentage">Giảm theo %</option>
+                            <option value="fixed">Số tiền cố định</option>
+                            <option value="free">Miễn phí</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="discount-value-wrapper">
+                        <label for="discount-value" class="form-label">Giá trị</label>
+                        <input type="number" class="form-control" id="discount-value" name="discount_value" placeholder="Nhập % hoặc số tiền">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="createEnrollmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Tạo Khóa học mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="create-enrollment-form">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tên khóa học</label>
+                        <input type="text" class="form-control" name="course_name" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tổng học phí (VNĐ)</label>
+                            <input type="number" class="form-control" name="total_fee" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tổng số buổi</label>
+                            <input type="number" class="form-control" name="total_sessions" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú</label>
+                        <textarea class="form-control" name="notes" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Tạo khóa học</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- *** MODAL MỚI: THÊM ĐỢT THANH TOÁN *** -->
+<div class="modal fade" id="addInstallmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm đợt thanh toán</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="add-installment-form">
+                <input type="hidden" name="enrollment_id" id="installment_enrollment_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Số tiền cần đóng (VNĐ)</label>
+                        <input type="number" class="form-control" name="amount_due" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Hạn nộp</label>
+                        <input type="date" class="form-control" name="due_date" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Thêm đợt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- *** MODAL MỚI: THÊM GIA ĐÌNH MỚI *** -->
+<div class="modal fade" id="addFamilyModal" tabindex="-1" aria-labelledby="addFamilyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addFamilyModalLabel">Thêm Gia đình Mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="add-family-form">
+                <div class="modal-body">
+                    <div id="add-family-alert" class="alert d-none"></div>
+                    <h6>Thông tin Phụ huynh</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Tên Phụ huynh<span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="parent_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Số điện thoại<span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" name="parent_phone" required>
+                        </div>
+                    </div>
+
+                    <h6>Thông tin Học sinh</h6>
+                    <div id="student-fields-container">
+                        <!-- Student fields will be added here by JS -->
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="add-student-field-btn">
+                        <i class="fas fa-plus me-1"></i>Thêm học sinh khác
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu Gia đình</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Template cho một học sinh (dùng cho JS) -->
+<template id="student-field-template">
+    <div class="student-entry border rounded p-3 mb-3">
+        <div class="row g-3">
+            <div class="col-12 text-end">
+                <button type="button" class="btn-close remove-student-field-btn" aria-label="Close"></button>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Tên Học sinh<span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="students[name][]" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Email<span class="text-danger">*</span></label>
+                <input type="email" class="form-control" name="students[email][]" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Mật khẩu<span class="text-danger">*</span></label>
+                <input type="password" class="form-control" name="students[password][]" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Trường</label>
+                <input type="text" class="form-control" name="students[school][]">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Lớp</label>
+                <input type="text" class="form-control" name="students[class][]">
+            </div>
+        </div>
+    </div>
+</template>
