@@ -1,0 +1,45 @@
+<?php
+// ini_set('display_errors', 1);
+// ini_set('display_startup_errors', 1);
+// error_reporting(E_ALL);
+
+header('Content-Type: application/json; charset=utf-8');
+
+
+// File: includes/ajax_get_students_for_session.php
+require_once __DIR__ . '/../../config/dbh.inc.php';
+require_once __DIR__ . '/admin.function.inc.php';
+// require 'C:\xampp\htdocs\roll-call-main\includes\admin.function.inc.php';
+
+$input = file_get_contents('php://input');
+$data = json_decode($input, true);
+
+// $teacher_id = $data['teacher_id'] ?? null;
+// $filter_month = $data['filter_month'] ?? null;
+
+
+if (!$conn || $conn->connect_error) {
+    http_response_code(500);
+    // Trả về lỗi kết nối CSDL chi tiết
+    echo json_encode(['error' => 'Lỗi kết nối cơ sở dữ liệu: ' . $conn->connect_error]);
+    exit(); // Dừng thực thi ngay lập tức
+}
+
+try {
+    $user_id = isset($data['teacher_id']) ? intval($data['teacher_id']) : 0;
+    $filter_month = $data['filter_month'] ?? null;
+    // var_dump($user_id);
+    // var_dump($filter_month);
+    // echo "hihi", $user_id;
+    // echo "hahaha", $filter_month;
+    // exit;
+    // Gọi hàm để lấy dữ liệu
+    $get_teacher_bouns = getFilterTeacherBonus($conn, $user_id, $filter_month);
+
+    // Trả dữ liệu JSON hợp lệ
+    echo json_encode($get_teacher_bouns);
+} catch (Exception $e) {
+    // Nếu có lỗi, trả về thông báo lỗi chi tiết
+    http_response_code(500);
+    echo json_encode(['error' => 'Đã xảy ra lỗi trong khối try-catch: ' . $e->getMessage()]);
+}
