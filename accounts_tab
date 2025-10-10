@@ -1,0 +1,342 @@
+<?php
+// File: public_html/admin/tabs/_accounts_tab.php
+?>
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5>Quản lý Giáo viên</h5>
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-plus me-2"></i>Thêm Mới
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addTeacherModal">Thêm Giáo viên</a></li>
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addFamilyModal">Thêm Gia đình Mới</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="card-body">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Tên</th>
+                    <th>Email</th>
+                    <th>Phương thức tính lương</th>
+                    <th>Giá trị lương</th>
+                    <th>Trạng thái</th>
+                    <th class="text-center">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($all_teachers as $teacher): ?>
+                    <!-- <?php
+                            var_dump($all_teachers);
+                            ?> -->
+                    <tr>
+                        <!-- <input type="hidden" name="teacher_id" value="<?= htmlspecialchars($teacher['teacher_id']) ?>"> -->
+                        <td><?= htmlspecialchars($teacher['name']) ?></td>
+                        <td><?= htmlspecialchars($teacher['email']) ?></td>
+                        <form action="../includes/admin_action.inc.php" method="POST" onsubmit="return validateBeforeSubmit(<?= $teacher['teacher_id'] ?>)" class=" d-inline" id="teacherSalaryForm_<?= $teacher['teacher_id'] ?>">
+                            <td>
+                                <input type="hidden" name="action" value="update_teacher_salary_method">
+                                <input type="hidden" name="user_id" value="<?= $teacher['teacher_id'] ?>">
+
+                                <select id="salary_method_<?= $teacher['teacher_id'] ?>" name="salary_method" class="form-select form-select-sm w-auto" onchange="onSalaryMethodChange(this);this.form.submit()">
+                                    <option value="monthly" <?= isset($teacher['salary_method']) && $teacher['salary_method'] === 'monthly' ? 'selected' : '' ?>selected>Lương theo tháng</option>
+                                    <option value="percentage" <?= isset($teacher['salary_method']) && $teacher['salary_method'] === 'percentage' ? 'selected' : '' ?>>Trên lớp</option>
+                                    <option value="fixed_session" <?= isset($teacher['salary_method']) && $teacher['salary_method'] === 'fixed_session' ? 'selected' : '' ?>>Cố định mỗi buổi</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div id="salary_value_group_<?= $teacher['teacher_id'] ?>" style="display: inline-block;">
+                                    <input type="text"
+                                        name="salary_value"
+                                        id="salary_value_<?= $teacher['teacher_id'] ?>"
+                                        class="form-control form-control-sm"
+                                        style="display: inline-block; width: auto;"
+                                        placeholder=""
+                                        value="<?= isset($teacher['salary_value']) && is_numeric($teacher['salary_value']) ? number_format($teacher['salary_value'], 0, ',', '.') : '' ?>"
+                                        onfocus="storeOldValue(this)"
+                                        oninput="formatNumberWithCommas(this)"
+                                        onblur="onSalaryValueBlur(this, <?= $teacher['teacher_id'] ?>)" />
+                                </div>
+                            </td>
+                        </form>
+                        <td>
+                            <form action="../includes/admin_action.inc.php" method="POST" class="d-inline">
+                                <input type="hidden" name="action" value="update_teacher_status">
+                                <input type="hidden" name="user_id" value="<?= $teacher['teacher_id'] ?>">
+                                <select name="new_status" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                                    <option value="pending" <?= $teacher['status'] === 'pending' ? 'selected' : '' ?>>Pending</option>
+                                    <option value="active" <?= $teacher['status'] === 'active' ? 'selected' : '' ?>>Active</option>
+                                    <option value="inactive" <?= $teacher['status'] === 'inactive' ? 'selected' : '' ?>>Inactive</option>
+                                    <option value="rejected" <?= $teacher['status'] === 'rejected' ? 'selected' : '' ?>>Rejected</option>
+                                </select>
+                            </form>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-warning edit-teacher-btn" data-teacher-id="<?= $teacher['teacher_id'] ?>"><i class="fas fa-pen"></i></button>
+                            <form action="../includes/admin_action.inc.php" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa giáo viên này?');" class="d-inline">
+                                <input type="hidden" name="action" value="delete_user">
+                                <input type="hidden" name="user_type" value="teacher">
+                                <input type="hidden" name="user_id" value="<?= $teacher['teacher_id'] ?>">
+                                <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="accordion" id="accountsAccordion">
+    <?php foreach ($accounts_data as $class_id => $data): ?>
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-class-acc-<?= $class_id ?>">
+                    Phụ huynh & Học sinh - Lớp <?= htmlspecialchars($data['class_name']) ?>
+                </button>
+            </h2>
+            <div id="collapse-class-acc-<?= $class_id ?>" class="accordion-collapse collapse" data-bs-parent="#accountsAccordion">
+                <div class="accordion-body">
+                    <?php if (empty($data['parents']) && empty($data['unlinked_students'])): ?>
+                        <div class="alert alert-secondary text-center">Chưa có phụ huynh hoặc học sinh trong lớp này.</div>
+                    <?php else: ?>
+                        <ul class="list-group">
+                            <?php foreach ($data['parents'] as $parent_id => $parent_info): ?>
+                                <li class="list-group-item">
+                                    <!-- Thông tin phụ huynh -->
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="mb-0"><?= htmlspecialchars($parent_info['parent_name']) ?></h6>
+                                            <small class="text-muted"><i class="fas fa-phone me-1"></i><?= htmlspecialchars($parent_info['phone_number']) ?></small>
+                                            <div class="mt-1">
+                                                <span class="badge bg-light text-dark border"><?= $parent_info['tuition_model'] == 'package' ? 'Theo Gói' : 'Theo Tháng' ?></span>
+                                                <?php if ($parent_info['tuition_model'] == 'monthly'): ?>
+                                                    <span class="badge bg-info text-dark"><?= formatDiscountInfo($parent_info['discount_type'], $parent_info['discount_value']) ?></span>
+                                                <?php endif; ?>
+                                                <?php if ($parent_info['overdue_count'] > 0): ?>
+                                                    <span class="badge bg-danger ms-1">Có khoản quá hạn</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editDiscountModal"
+                                                data-parent-id="<?= $parent_id ?>" data-phone="<?= htmlspecialchars($parent_info['phone_number']) ?>">
+                                                <i class="fas fa-percent"></i> Ưu đãi
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <!-- Danh sách học sinh của phụ huynh này -->
+                                    <ul class="list-group list-group-flush">
+                                        <?php foreach ($parent_info['students'] as $student_id => $student_info): ?>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center ps-4">
+                                                <div>
+                                                    <i class="fas fa-user-graduate me-2 text-muted"></i>
+                                                    <?= htmlspecialchars($student_info['name']) ?>
+                                                    <?php if (isset($student_info['remaining_sessions'])): ?>
+                                                        <span class="badge bg-success ms-2">Còn <?= $student_info['remaining_sessions'] ?> buổi</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <form action="../includes/admin_action.inc.php" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa học sinh này?');" class="d-inline">
+                                                    <input type="hidden" name="action" value="delete_user" />
+                                                    <input type="hidden" name="user_type" value="student" />
+                                                    <input type="hidden" name="user_id" value="<?= $student_id ?>" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                                </form>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </li>
+                            <?php endforeach; ?>
+
+                            <?php if (!empty($data['unlinked_students'])): ?>
+                                <li class="list-group-item mt-3 bg-light-subtle">
+                                    <h6 class="mb-1">Học sinh chưa liên kết phụ huynh</h6>
+                                    <ul class="list-group list-group-flush">
+                                        <?php foreach ($data['unlinked_students'] as $student_id => $student_info): ?>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center ps-4">
+                                                <?= htmlspecialchars($student_info['name']) ?>
+                                                <form action="../includes/admin_action.inc.php" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa học sinh này?');" class="d-inline">
+                                                    <input type="hidden" name="action" value="delete_user" />
+                                                    <input type="hidden" name="user_type" value="student" />
+                                                    <input type="hidden" name="user_id" value="<?= $student_id ?>" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                                </form>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </li>
+                            <?php endif; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    <?php endforeach; ?>
+</div>
+
+<!-- Danh sách học sinh chưa phân lớp -->
+<div class="card mt-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Học sinh chưa phân lớp</h5>
+    </div>
+    <div class="card-body">
+        <?php if (empty($unassigned_students)): ?>
+            <div class="alert alert-secondary text-center">Tất cả học sinh đã được phân vào lớp.</div>
+        <?php else: ?>
+            <ul class="list-group">
+                <?php foreach ($unassigned_students as $student): ?>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong><?= htmlspecialchars($student['name']) ?></strong>
+                            <br>
+                            <small class="text-muted">PH: <?= htmlspecialchars($student['parent_name'] ?? 'Chưa liên kết') ?></small>
+                        </div>
+                        <div>
+                            <form action="../includes/admin_action.inc.php" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa học sinh này? Hành động này không thể hoàn tác.');" class="d-inline">
+                                <input type="hidden" name="action" value="delete_user">
+                                <input type="hidden" name="user_type" value="student">
+                                <input type="hidden" name="user_id" value="<?= $student['student_id'] ?>">
+                                <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Xóa</button>
+                            </form>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </div>
+</div>
+
+<script>
+    const oldValues = {};
+
+    function storeOldValue(inputEl) {
+        inputEl.setAttribute('data-old', inputEl.value);
+    }
+
+    function formatNumberWithCommas(input) {
+        let raw = input.value.replace(/,/g, '').replace(/[^0-9.]/g, '');
+        if (raw === '') {
+            input.value = '';
+            return;
+        }
+        let parts = raw.split('.');
+        let integer = parts[0];
+        let decimal = parts[1] || '';
+        integer = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        input.value = integer + (decimal !== '' ? '.' + decimal : '');
+    }
+
+    function onSalaryMethodChange(teacherId) {
+        const sel = document.getElementById(`salary_method_${teacherId}`);
+        const inp = document.getElementById(`salary_value_${teacherId}`);
+        if (!sel || !inp) return;
+        if (sel.value === 'percentage') {
+            inp.onblur = function() {
+                validatePercentage(inp);
+            };
+        } else {
+            inp.onblur = function() {
+                onSalaryValueBlur(inp, teacherId);
+            };
+        }
+    }
+
+    function onSalaryValueBlur(inputEl, teacherId) {
+        const sel = document.getElementById(`salary_method_${teacherId}`);
+        if (sel && sel.value === 'percentage') {
+            validatePercentage(inputEl);
+        } else {
+            let raw = inputEl.value.replace(/,/g, '').trim();
+            if (raw !== '' && !isNaN(raw)) {
+                inputEl.value = parseFloat(raw).toLocaleString();
+            } else {
+                inputEl.value = '';
+            }
+        }
+    }
+
+    function validatePercentage(inputEl) {
+        let raw = inputEl.value.replace(/,/g, '').trim();
+        if (raw === '') {
+            alert('Vui lòng nhập phần trăm.');
+            inputEl.value = oldValues[inputEl.id] ?? '';
+            return false;
+        }
+        let val = parseFloat(raw);
+        if (isNaN(val) || val < 0 || val > 100) {
+            alert('Giá trị phần trăm phải trong khoảng 0 đến 100.');
+            inputEl.value = oldValues[inputEl.id] ?? '';
+            return false;
+        }
+        inputEl.value = val.toLocaleString(undefined, {
+            maximumFractionDigits: 2
+        });
+        return true;
+    }
+
+    function validateBeforeSubmit(teacherId) {
+        const sel = document.getElementById(`salary_method_${teacherId}`);
+        const inp = document.getElementById(`salary_value_${teacherId}`);
+        // if (!sel || !inp) {
+        //     // Nếu không tìm thấy select hoặc input → để submit bình thường
+        //     return confirm("Bạn có chắc chắn muốn cập nhật lương giáo viên này?");
+        // }
+
+        const method = sel.value;
+        const raw = inp.value.replace(/,/g, '').trim();
+        const old = inp.getAttribute('data-old') || inp.value;
+        // console.log("gia tri ban dau", old);
+        // console.log("raw", raw);
+        // Nếu method = percentage thì kiểm tra 0 <= value <= 100
+        if (method === 'percentage') {
+            if (raw === '') {
+                alert('Vui lòng nhập giá trị phần trăm.');
+                inp.value = old;
+                return false;
+            }
+            const val = parseFloat(raw);
+            if (isNaN(val) || val < 0 || val > 100) {
+                alert('Giá trị phần trăm không hợp lệ (0–100).');
+                inp.value = old;
+                // console.log("thay doi gia tri", old);
+                // console.log("inp.value", inp.value);
+                return false;
+            }
+            // format lại nếu cần:
+            inp.value = val.toLocaleString(undefined, {
+                maximumFractionDigits: 2
+            });
+        } else {
+            // Nếu phương thức khác, kiểm tra giá trị là số hợp lệ nếu có nhập
+            if (raw !== '') {
+                const v2 = parseFloat(raw);
+                if (isNaN(v2)) {
+                    alert('Giá trị lương phải là số hợp lệ.');
+                    inp.value = old;
+                    return false;
+                }
+                inp.value = v2.toLocaleString();
+            }
+        }
+
+        // Nếu validation OK, hiển thị confirm
+        const ok = confirm("Bạn có chắc chắn muốn cập nhật lương giáo viên này?");
+        if (!ok) {
+            // người dùng chọn Cancel → khôi phục giá trị cũ
+            inp.value = old;
+        }
+        return ok;
+    }
+
+
+    // Khởi tạo onSalaryMethodChange cho tất cả khi load
+    window.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('[id^="salary_method_"]').forEach(sel => {
+            const parts = sel.id.split('_');
+            const teacherId = parts[parts.length - 1];
+            onSalaryMethodChange(teacherId);
+        });
+    });
+</script>
