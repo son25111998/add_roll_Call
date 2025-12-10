@@ -1,0 +1,178 @@
+import os
+from PIL import Image
+import numpy as np
+import tensorflow as tf
+
+# def load_dataset(base_dir, valid_exts=(".jpg", ".bmp")):
+#     images = []
+#     labels = []
+#
+#     for label_name in os.listdir(base_dir):
+#         folder_path = os.path.join(base_dir, label_name)
+#         print("folder path", folder_path)
+#         if not os.path.isdir(folder_path):
+#             continue
+#         for file_name in os.listdir(folder_path):
+#             print("file_name", file_name)
+#             if file_name.lower().endswith(valid_exts):
+#                 full_path = os.path.join(folder_path, file_name)
+#                 try:
+#                     img = Image.open(full_path).convert("L")
+#                     img = img.resize((380, 128), resample=Image.LINEAR)
+#                     img_array = np.array(img) / 255.0
+#                     images.append(img_array)
+#                     labels.append(label_name)
+#                 except Exception as e:
+#                     print(f"image not load {full_path}: {e}")
+#     return np.array(images), np.array(labels)
+#
+#
+# base_dir = r"G:\1.Assy\IT\Image\Data_Train\250429_Train_IC_Crack\L3"
+# x, y = load_dataset(base_dir)
+# print("load image", x.shape)
+# print("label", y.shape, np.unique(y))
+# print(x)
+
+from PIL import Image
+import matplotlib.pyplot as plt
+from mtcnn import MTCNN
+import matplotlib.pyplot as ptl
+import tensorflow as tf
+from tensorflow.keras.preprocessing import image
+from keras.applications import MobileNetV2
+from keras.applications.mobilenet_v2 import preprocess_input
+from keras.models import Model
+from keras.layers import Dense, GlobalAveragePooling2D
+from keras.optimizers import Adam
+from keras.utils import to_categorical
+
+
+def load_image(image_path, valid_extend=(".jpeg", ".bmp", ".jpg")):
+    if image_path.lower().endswith(valid_extend):
+        img = Image.open(image_path).convert("RGB")
+        img = np.array(img)
+        return img
+    else:
+        return []
+
+
+# base_dir = r"F:\WIDER_train\WIDER_train\faces"
+#
+# mtcnn = MTCNN()
+#
+# i = 0
+#
+# for file in os.listdir(base_dir):
+#     file_path = os.path.join(base_dir, file)
+#     print(file_path)
+#     img = load_image(file_path)
+#     print(img)
+#     faces = mtcnn.detect_faces(img)
+#     ptl.imshow(img)
+#     idx = 0
+#     for face in faces:
+#         x, y, w, h = face['box']
+#         face_crop = img[y:y + h, x:x + w]
+#         # Chuyển ảnh đã cắt thành ảnh Pillow
+#         face_pil = Image.fromarray(face_crop)
+#
+#         filename = f"F://WIDER_train//WIDER_train//face_Crop//face_{i}_{idx}.jpg"
+#         face_pil.save(filename)
+#         idx = idx + 1
+#         # ptl.imshow(face_pil)
+#         ptl.gca().add_patch(plt.Rectangle((x, y), w, h, fill=False, color='red', linewidth=2))
+#         for point in face['keypoints'].values():
+#             plt.scatter(point[0], point[1], color='blue', marker='x')
+#     ptl.axis('off')
+#     ptl.show()
+#     i = i + 1
+
+face_images = []
+face_labels = []
+
+face_dir = r"F:\WIDER_train\WIDER_train\face_Crop"
+
+for file_name in os.listdir(face_dir):
+    if file_name.endswith(".jpg"):
+        img_path = os.path.join(face_dir, file_name)
+        img = image.load_img(img_path, target_size=(224, 224))
+
+        img_array = image.img_to_array(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = preprocess_input(img_array)
+
+        face_images.append(img_array)
+
+        label = file_name.split('_')[0]
+        face_labels.append(label)
+
+# Chuyển danh sách thành numpy array
+face_images = np.vstack(face_images)
+# face_labels = np.vstack(face_labels)
+#
+# print("face_images",face_images)
+# print("face_labels",face_labels)
+
+# Chuyển nhãn thành dạng one-hot encoding
+unique_labels = np.unique(face_labels)
+
+label_dict = {}
+label_dict_value = []
+for idx, label in enumerate(unique_labels):
+    print(f"{idx} và {label}")
+    label_dict[label] = idx
+
+# label_dict = {label: idx for idx, label in enumerate(unique_labels)}
+#
+print(label_dict)
+
+for label in face_labels:
+    print(label)
+    print("ds", label_dict[label])
+    label_dict_value.append(np.array(label_dict[label]))
+
+# face_labels_encoded = np.array([label_dict[label] for label in face_labels])
+
+print(label_dict_value)
+
+face_label_one_hot = to_categorical(label_dict_value, num_classes=len(face_labels))
+print(face_label_one_hot)
+
+# Tải MobileNetV2 đã được huấn luyện trước trên ImageNet
+base_model = MobileNetV2(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+
+# Đóng băng các lớp của MobileNetV2 để không bị huấn luyện lại
+for layer in base_model.layers:
+    layer.trainable = False
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
+x = Dense(1024, activation='relu')(x)
+prediction = Dense(len(unique_labels), activation='softmax')(x)
+
+model = Model(inputs=base_model.input, outputs=prediction)
+
+model.compile(optimizer=Adam(lr=0.005), loss="categorical_crossentropy", metrics=['accuracy'])
+model.summary()
+
+model.fit(face_images, face_label_one_hot, epochs=10, batch_size=32, validation_split=0.1)
+model.save('face_recognition_model.h5')
+
+# Đánh giá mô hình trên tập kiểm tra (nếu có)
+# accuracy = model.evaluate(test_images, test_labels)
+
+# Sử dụng mô hình để nhận dạng một khuôn mặt mới
+def predict_face(img_path):
+    img = image.load_img(img_path, target_size=(224, 224))
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = preprocess_input(img_array)
+
+    # Dự đoán khuôn mặt
+    prediction = model.predict(img_array)
+    print("prediction",prediction)
+    predicted_label = unique_labels[np.argmax(prediction)]
+    return predicted_label
+
+# Dự đoán cho ảnh mới
+new_face = r'F:\WIDER_train\WIDER_train\face_Crop\face9_9_0.jpg'
+print(f"Nhận dạng khuôn mặt: {predict_face(new_face)}")
