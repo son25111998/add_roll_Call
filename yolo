@@ -1,0 +1,143 @@
+import json
+import os
+from PIL import Image
+
+
+# Hàm chuyển LabelMe sang YOLO
+def convert_labelme_to_yolo(json_file, img_width, img_height, class_map):
+    with open(json_file, 'r') as f:
+        data = json.load(f)
+
+    shapes = data['shapes']
+    yolo_data = []
+
+    for shape in shapes:
+        label = shape['label']
+        points = shape['points']
+
+        # Tính toán bounding box từ polygon
+        x_min = min([p[0] for p in points])
+        x_max = max([p[0] for p in points])
+        y_min = min([p[1] for p in points])
+        y_max = max([p[1] for p in points])
+
+        # Chuyển đổi sang tọa độ chuẩn hóa YOLO
+        x_center = (x_min + x_max) / 2 / img_width
+        y_center = (y_min + y_max) / 2 / img_height
+        width = (x_max - x_min) / img_width
+        height = (y_max - y_min) / img_height
+
+        # Tìm class_id từ class_map
+        class_id = class_map.get(label, -1)
+
+        # Thêm thông tin vào danh sách yolo_data
+        yolo_data.append(f"{class_id} {x_center} {y_center} {width} {height}")
+
+    return yolo_data
+
+
+# Hàm lưu file YOLO .txt
+def save_yolo_format(yolo_data, output_dir, image_name):
+    base_name = os.path.splitext(image_name)[0]
+    with open(os.path.join(output_dir, f"{base_name}.txt"), 'w') as f:
+        for line in yolo_data:
+            f.write(line + '\n')
+
+
+# Hàm lấy kích thước ảnh từ file ảnh tương ứng
+def get_image_size(image_path):
+    with Image.open(image_path) as img:
+        return img.size  # trả về (width, height)
+
+
+# Hàm chuyển đổi cho tất cả các file JSON trong thư mục
+def convert_all_json_to_yolo(json_dir, img_dir, output_dir, class_map):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Lặp qua tất cả các file JSON trong thư mục
+    for json_file in os.listdir(json_dir):
+        if json_file.endswith('.json'):
+            # Lấy tên ảnh tương ứng (cùng tên nhưng khác phần mở rộng)
+            img_name = os.path.splitext(json_file)[0] + '.jpg'  # hoặc .png, tùy theo định dạng ảnh của bạn
+            img_path = os.path.join(img_dir, img_name)
+
+            if os.path.exists(img_path):
+                # Lấy kích thước ảnh
+                img_width, img_height = get_image_size(img_path)
+
+                # Đọc và chuyển đổi file JSON
+                json_path = os.path.join(json_dir, json_file)
+                yolo_data = convert_labelme_to_yolo(json_path, img_width, img_height, class_map)
+
+                # Lưu kết quả YOLO vào thư mục output
+                save_yolo_format(yolo_data, output_dir, img_name)
+                print(f"Đã chuyển đổi {json_file} thành file YOLO tương ứng.")
+            else:
+                print(f"Không tìm thấy ảnh {img_name} tương ứng với {json_file}")
+
+
+# Ví dụ sử dụng:
+class_map = {
+    "human": 0,
+    "panel": 1,
+}
+
+# Đường dẫn tới thư mục chứa file JSON, ảnh và thư mục output
+json_dir = r"G:\4.AI_Handling\DATA\images\train_test_yolo\json"
+img_dir = r"G:\4.AI_Handling\DATA\images\train_test_yolo\images"
+output_dir = r"G:\4.AI_Handling\DATA\images\train_test_yolo\labels"
+
+# Chuyển đổi tất cả file JSON trong thư mục
+convert_all_json_to_yolo(json_dir, img_dir, output_dir, class_map)
+
+
+======================================================================
+
+from ultralytics import YOLO
+
+# Tải lại mô hình đã huấn luyện
+model = YOLO(r'G:\4.AI_Handling\DATA\images\train_test_yolo\model\model.pt')  # Thay bằng đường dẫn đến model của bạn
+
+# Dự đoán trên một ảnh
+results = model.predict(r'G:\4.AI_Handling\DATA\images\val\vid5_frame_21.jpg', device='cpu')  # Thay bằng đường dẫn ảnh của bạn
+
+# Kiểm tra kiểu dữ liệu của results
+print(type(results))  # Sẽ là 'list' vì kết quả trả về là một danh sách các đối tượng Results
+
+# Dự đoán có thể trả về một danh sách các đối tượng Results. Ta chỉ cần lấy phần tử đầu tiên:
+result = results[0]  # Lấy kết quả đầu tiên trong danh sách
+
+# Hiển thị ảnh với các bounding boxes vẽ lên
+result.show()
+
+# Nếu bạn muốn lưu ảnh đã vẽ bounding boxes:
+result.save()  # Lưu ảnh vào thư mục 'runs/detect/exp'
+===========================================================================
+from ultralytics import YOLO
+
+
+
+if __name__ == '__main__':
+  model = YOLO(r'F:\Yolo\model\yolo11n.pt') #segment
+  # model = YOLO(r'D:\NTC\AI_YOLO\V11\Model\yolo11s.pt') #obj
+  results = model.train(
+    data=r'G:\4.AI_Handling\DATA\images\train_test_yolo\data.yaml', #segment
+    # data=r'D:\0.Projects\CNT_AFTP\YOLO\ObjectDetect_Cls\04032025_FlipRotate\config.yaml', #obj
+    epochs=100,  # number of training epochs
+    batch=16,
+    imgsz=640,  # training image size
+    device="cpu",  # device to run on, i.e. device=0 or device=0,1,2,3 or device=cpu
+    patience=300, #Neu khong co su thay doi trong vong X epoch thi se dung train
+    # augment= False,
+    # auto_augment= None,
+    # hsv_v=0.1, #pham vi thay doi do sang anh
+    # mosaic=0.0, #1 la trong anh. Ghep 4 anh vao 1
+    # erasing = 0.1, #xoas ngaaux nhieen 10% vung anh
+  )
+  model.save(r'G:\4.AI_Handling\DATA\images\train_test_yolo\model/model.pt')
+
+
+
+main()
+
