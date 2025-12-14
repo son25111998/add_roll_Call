@@ -1,0 +1,92 @@
+=================Predict====================================
+
+import tensorflow as tf
+
+import numpy as np
+from tensorflow.keras.preprocessing import image
+import json
+import os
+
+# class_names = sorted(os.listdir(r"D:\Application\Python\Datasets\faces\face_Crop"))
+# print(class_names)
+# train_ds = tf.keras.utils.image_dataset_from_directory(
+#     r"D:\Application\Python\Datasets\faces\face_Crop",
+#     image_size=(224, 224),
+#     batch_size=32
+# )
+
+# print(train_ds.class_names[256])
+
+model = tf.keras.models.load_model("detect.h5")
+
+with open("class_indices.json") as f:
+    class_names = json.load(f)
+
+
+img_path = r"D:\Application\Python\Datasets\faces\face_Crop\Jessica_Simpson\Jessica_Simpson_0001.jpg"
+img = image.load_img(img_path, target_size=(224, 224))
+x = image.img_to_array(img)
+x = np.expand_dims(x, axis=0)
+x = x / 255.0
+
+pred = model.predict(x)
+idx = pred.argmax()
+label = class_names[idx]
+
+print("class:", pred.argmax())
+print(label)
+
+==================================================================================================
+
+import tensorflow as tf
+print(tf.__version__)
+print(tf.config.list_physical_devices('GPU'))
+
+from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.layers import Dense,GlobalAvgPool2D
+from tensorflow.keras.models import Model
+import json
+
+image_size =224
+batch_size =32
+train_ds = tf.keras.preprocessing.image_dataset_from_directory(
+    r"D:\Application\Python\Datasets\faces\face_Crop",
+    image_size=(image_size, image_size),
+    batch_size=batch_size,
+    label_mode="categorical",
+)
+num_classes = len(train_ds.class_names)
+
+print("num_classes",num_classes)
+
+# 🔥 LƯU LABEL MAPPING
+class_names = train_ds.class_names
+print(class_names)
+
+with open("class_indices.json", "w") as f:
+    json.dump(class_names, f)
+
+base_model = ResNet50(
+    weights = "imagenet",
+    include_top = False,
+    input_shape=(image_size, image_size, 3)
+)
+
+# 🔥 CHO PHÉP FINE-TUNE
+base_model.trainable = True
+
+x = GlobalAvgPool2D()(base_model.output)
+x = Dense(512, activation='relu')(x)
+output = Dense(num_classes, activation='softmax')(x)
+model = Model(inputs=base_model.input, outputs=output)
+
+model.summary()
+model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+model.fit(train_ds,epochs=50)
+
+model.save("detect.h5")
